@@ -5,17 +5,12 @@
 // @author      3ncode3
 // @include     /^https?:\/\/forum\.snahp\.it\/posting\.php\?mode\=post\&f\=(42|55|26|29|66|30|88|56|72|73|64|31|32|65|84|33|61|62|57|74|75)/
 // @require     https://code.jquery.com/jquery-3.4.1.min.js
-// @require     https://code.jquery.com/ui/1.12.1/jquery-ui.js
-// @require     https://raw.githubusercontent.com/Semantic-Org/UI-Search/master/search.js
-// @require     https://raw.githubusercontent.com/Semantic-Org/UI-Api/master/api.js
+// @require     https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 // @grant       GM_addStyle
 // @grant       GM_xmlhttpRequest
-// @grant       GM_setClipboard
-// @grant       GM.setValue
-// @grant       GM.getValue
 // ==/UserScript==
 
-;(function () {
+;(async function () {
   // Hide on preview
   if (window.location.href.includes('preview')) return
 
@@ -38,8 +33,11 @@
 
     <dr style="clear: left;" id="Snahpify">
 
-    <dt> <label for="screenlinks">Screenshot Links:</label> </dt>
-    <dd> <input type="text" name="screenslinks" id="screenslinks" class="inputbox autowidth" size="45"></input> </dd>
+    <dt> <label for="banner">Banner:</label> </dt>
+    <dd> <input type="text" name="banner" id="banner" class="inputbox autowidth" size="45"></input> </dd>
+
+    <dt> <label for="screenslinks">Screenshot Links:</label> </dt>
+    <dd> <input type="text" name="screenslinks" id="screenslinks" class="inputbox autowidth" size="45" placeholder="Space-separated links"></input> </dd>
 
     <dt> <label for="mega">MEGA Link:</label> </dt>
     <dd> <input type="text" name="mega" class="sp-links inputbox autowidth" size="45" data-color="#FF0000"></input> </dd>
@@ -49,18 +47,33 @@
 
     <dt> <label for="gdrive">Google Drive Link:</label> </dt>
     <dd> <input type="text" name="gdrive" class="sp-links inputbox autowidth" size="45" data-color="#00FF00"></input> </dd>
+    
+    <div class="sp-section"></div>
+    
+    <dt> <label for="linkpro">Link Protection:</label> </dt>
+    <dd> 
+      <input type="checkbox" name="linkpro" id="linkpro" class="inputbox autowidth" size="45">Snahp Link Protector</input>
+      <input type="checkbox" name="base64" id="base64" class="inputbox autowidth" size="45">Base 64</input>
+    </dd>
 
-    <dt> <label for="linkpro">Link Protector:</label> </dt>
-    <dd> <input type="checkbox" name="linkpro" id="linkpro" class="inputbox autowidth" size="45">Use</input> </dd>
+    <dt> <label for="base64-iters">Base64 iterations:</label> </dt>
+    <dd> <input type="number" name="base64-iters" id="base64-iters" class="inputbox autowidth" size="45" min="1" value="1"></input> </dd>
 
-    <dt> <label for="linkpro-pass">Link Protector Password:</label> </dt>
+    <dt> <label for="linkpro-pass">Link Password:</label> </dt>
     <dd> <input type="text" name="linkpro-pass" id="linkpro-pass" class="inputbox autowidth" size="45" placeholder="Leave blank for no password"></input> </dd>
+
+    <dt> <label for="linkpro-pass-hint">Link Password Hint:</label> </dt>
+    <dd> <input type="text" name="linkpro-pass-hint" id="linkpro-pass-hint" class="inputbox autowidth" size="45" placeholder="Password is ..."></input> </dd>
+
+    <div class="sp-section"></div>
 
     <dt> <label for="mediainfo">Mediainfo:</label> </dt>
     <dd> <textarea rows="1" name="mediainfo" id="mediainfo" size="45" class="inputbox autowidth" style="width: 100%;"></textarea> </dd>
 
+    <div class="sp-section"></div>
+
     <dd>
-    <button class="button--primary button button--icon" id="sp-generate" type="button">Generate Post</button>
+    <button class="button--primary button button--icon" id="sp-generate" type="button">SNAHPIFY</button>
     &nbsp;
     <button class="button--primary button button--icon" id="sp-clear" type="reset">Clear</button>
     </dd>
@@ -96,24 +109,43 @@
     snahpPoster.toggle()
   }
 
+  function serialize (obj) {
+    let str = Object.keys(obj)
+      .reduce(function (a, k) {
+        a.push(k + '=' + encodeURIComponent(obj[k]))
+        return a
+      }, [])
+      .join('&')
+    return str
+  }
+
+  function toB64 (str, iters = 1) {
+    for (let i = 1; i <= iters; i++) {
+      str = window.btoa(str)
+    }
+
+    return str
+  }
+
   function genProtectedLink (link, password = '') {
     let protected = link
 
-    $.ajax({
-      type: 'POST',
+    GM_xmlhttpRequest({
+      method: 'POST',
       url: SNAHP_LINKS,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      contentType: 'application/x-www-form-urlencoded; charset=utf-8',
-      dataType: 'xml',
-      data: {
+      data: serialize({
         information: link,
         pass: password,
         R2: 'V4',
         submit: 'Create Protected Links!'
+      }),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      success: function (xml) {
-        console.log(xml)
-        var urlEl = $(xml)
+      onload: function (response) {
+        console.log('response', response)
+
+        var urlEl = $(response.responseText)
           .find('div.success')
           .first()
           .text()
@@ -122,34 +154,48 @@
 
         if (!urlEl) return
 
-        let linkMatch = urlEl.match(URL_REGEX)
+        let linkMatch = URL_REGEX.exec(urlEl)
 
-        console.log(linkMatch)
+        console.log('match', linkMatch)
 
-        if (linkMatch) protected = linkMatch[1]
-      },
-      error: function (ajaxContext) {
-        console.error(ajaxContext.responseText)
-      },
-      async: false
+        if (linkMatch) {
+          protected = linkMatch[0]
+        }
+      }
     })
 
     return protected
   }
 
   function generateTemplate () {
-    var screenslinks = $('#screenslinks')
+    var banner = $('#banner')
+        .val()
+        .trim(),
+      screenslinks = $('#screenslinks')
         .val()
         .trim(),
       links = $('.sp-links'),
       useLinkPro = $('#linkpro').is(':checked'),
-      linkProPass = $('#linkpro-pass').val(),
-      mediainfo = $('#mediainfo').val(),
+      encodeB64 = $('#base64').is(':checked'),
+      B64Iters = parseInt($('#base64-iters').val()),
+      linkProPass = $('#linkpro-pass')
+        .val()
+        .trim(),
+      linkProPassHint = $('#linkpro-pass-hint')
+        .val()
+        .trim(),
+      mediainfo = $('#mediainfo')
+        .val()
+        .trim(),
       post = ''
 
     links = links.filter(function () {
       return this.value.length !== 0
     })
+
+    if (banner) {
+      post += `[banner]${banner}[/banner]`
+    }
 
     // Add screenshots
     if (screenslinks) {
@@ -174,32 +220,6 @@
         \n`
     }
 
-    // Add the download links
-    if (links.length !== 0) {
-      let postLinks = links
-        .map(function () {
-          let link = $(this)
-          let url = link.val()
-          console.log('useLinkPro', useLinkPro)
-
-          if (useLinkPro) {
-            console.log('Is link pro', url)
-            url = genProtectedLink(url, linkProPass)
-          }
-          return `[url=${url}][color=${link.data('color')}]${link.attr('name').toUpperCase()}[/color][/url]`
-        })
-        .get()
-        .join('\n')
-
-      post += `
-        [hr][/hr]
-        [center][size=150][color=#FF8000][b]Download Link[/b][/color][/size]\n
-          [hide][b]${postLinks}[/b][/hide]\n\n
-          Hit Reputation 🏆  if this helped 🙏
-        [/center]
-        `
-    }
-
     // Generate subject
     if (mediainfo && !subject.val()) {
       let miRows = mediainfo.split('\n')
@@ -216,14 +236,6 @@
       let yrIdx = fName.findIndex(e => YEAR_REGEX.test(e))
       let yr = fName[yrIdx]
       let title = fName.slice(0, yrIdx).join(' ')
-      // Get IMDB url
-      // let query = `https://www.omdbapi.com/?apikey=${API_KEY}&r=JSON&s=${title}&y=${yr}`;
-      // let imdbQuery = $.ajax({ url: query, dataType: 'jsonp' })
-      // imdbQuery.done(function (res) {
-      //   console.log('Got imdb:', res)
-      //   if (res.Response !== "True") return
-      //   Imdb.fillPostMessage(res.imdbID)
-      // })
       fName[yrIdx] = '(' + fName[yrIdx] + ')'
       fName = fName.join(' ')
       let hosts = links
@@ -248,9 +260,51 @@
       subject.val(postSubject)
     }
 
+    // Add the download links
+    if (links.length !== 0) {
+      let postLinks = links
+        .map(function () {
+          let link = $(this)
+          let url = link.val()
+          let host = link.attr('name').toUpperCase()
+          let color = link.data('color')
+          let postLink = ''
+
+          if (encodeB64) {
+            url = toB64(url, B64Iters || 1)
+            postLink = `[color=${color}]${host}: ${url}[/color]`
+          }
+
+          if (useLinkPro) {
+            console.log('Link pro url', url)
+            url = genProtectedLink(url, linkProPass)
+            console.log('Protected link', url)
+            postLink = `[url=${url}][color=${color}]${host}[/color][/url]`
+          }
+
+          return postLink
+        })
+        .get()
+        .join('\n')
+
+      post += `
+            [hr][/hr]
+            [center][size=150][color=#FF8000][b]Download Link[/b][/color][/size]\n
+              [hide][b]${postLinks}[/b][/hide]\n
+            [/center]
+            `
+
+      if (linkProPassHint) {
+        post += `\n
+              [center]
+                [size=125][b][i][color=#fac51c]Password is ${linkProPassHint}[/color][/i][/b][/size]
+              [/center]
+              `
+      }
+    }
+
     // Create post
     try {
-      console.log(post)
       message.val(post)
     } catch (err) {
       alert('Something went wrong ☹️' + err)
@@ -278,12 +332,20 @@
           line-height: unset;
       }
 
-      dd input ::placeholder {
+      dd input::placeholder {
         opacity: 0.5;
       }
 
       #Snahpify dd {
-        margin-bottom: 3px;
+        margin-bottom: 6px;
+      }
+
+      #Snahpify input[type='checkbox'] + input[type='checkbox'] {
+        margin-left: 12px;
+      }
+
+      #Snahpify .sp-section {
+        margin-top: 12px;
       }
   }
   `

@@ -6,8 +6,8 @@
 // @icon        https://forum.snahp.it/favicon.ico
 // @homepage    https://github.com/3ncode3/snahpify/
 // @supportURL  https://github.com/3ncode3/snahpify/issues/
-// @updateURL   https://github.com/3ncode3/snahpify/raw/script.user.js
-// @downloadURL https://github.com/3ncode3/snahpify/raw/script.user.js
+// @updateURL   https://github.com/3ncod3/snahpify/raw/main/script.user.js
+// @downloadURL https://github.com/3ncod3/snahpify/raw/main/script.user.js
 // @include     /^https?:\/\/forum\.snahp\.it\/posting\.php\?mode\=post\&f\=(42|55|26|29|66|30|88|56|72|73|64|31|32|65|84|33|61|62|57|74|75)/
 // @require     https://code.jquery.com/jquery-3.4.1.min.js
 // @require     https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js

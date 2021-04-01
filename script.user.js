@@ -20,6 +20,8 @@
   if (window.location.href.includes('preview')) return
 
   const SNAHP_LINKS = 'https://links.snahp.it/index.php'
+  const BUG_REPORT_LINK =
+    'https://github.com/3ncod3/snahpify/issues/new?assignees=&labels=bug&template=bug_report.md&title='
   const B64_WEBSITE = 'https://base64.io'
   const YEAR_REGEX = /^\d{4}$/g
   const URL_REGEX = /(https?:[^\s]+)/
@@ -127,9 +129,11 @@
         )
       ) {
         window.open(
-          'https://github.com/3ncode3/snahpify/issues/new?title=New+Error&body=' +
+          BUG_REPORT_LINK +
             encodeURIComponent(
-              `v${GM_info.script.version}\n` + JSON.stringify(err)
+              'PLEASE CHANGE THIS TITLE AND INCLUDE THIS INFO BELOW: ' +
+                `Version: ${GM_info.script.version}, Error: ` +
+                JSON.stringify(err, Object.getOwnPropertyNames(err))
             )
         )
       }
